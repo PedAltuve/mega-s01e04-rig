@@ -53,7 +53,7 @@ export const readNight: ReadNight = (runsDir, night) => {
       row.runs++;
       row.retries += run.status === 'retry' ? 1 : 0;
       row.lastStatus = run.status;
-      row.lastError = run.error ?? null;
+      row.lastError = run.error ?? row.lastError;
       row.owner = run.owner;
       row.lastAt = run.at;
     } else {

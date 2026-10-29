@@ -30,10 +30,10 @@ describe('readNight', () => {
     });
     expect(night?.rows[1]).toEqual({
       job: 'fixtures/refresh', owner: 'rook', runs: 4, retries: 3,
-      lastStatus: 'ok', lastError: null,
+      lastStatus: 'ok', lastError: 'upstream 503',
       firstAt: '2026-10-29T01:30:00+01:00', lastAt: '2026-10-29T01:37:00+01:00',
     });
-    expect(night?.rows[2]).toMatchObject({ runs: 8, retries: 1, lastStatus: 'ok' });
+    expect(night?.rows[2]).toMatchObject({ runs: 8, retries: 1, lastStatus: 'ok', lastError: 'lock held' });
     expect(night?.rows[3]).toMatchObject({ lastStatus: 'fail', lastError: 'quota exceeded' });
   });
 
