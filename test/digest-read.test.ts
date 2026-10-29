@@ -19,6 +19,7 @@ describe('readNight', () => {
     const night = readNight('runs', '2026-10-28');
     expect(night?.night).toBe('2026-10-28');
     expect(night?.badLines).toBe(1);
+    expect(night?.counts).toEqual({ ok: 10, retry: 4, fail: 1 });
     expect(night?.rows.map(row => row.job)).toEqual([
       'digest/render', 'fixtures/refresh', 'lane/sync', 'notes/backup', 'rig/rotate-logs',
     ]);
@@ -41,7 +42,7 @@ describe('readNight', () => {
   });
 
   it.each(['', '\n  \n\t\r\n'])('ignores empty or blank-only files (%j)', content => {
-    expect(readLines([content])).toEqual({ night: 'night', rows: [], badLines: 0 });
+    expect(readLines([content])).toEqual({ night: 'night', rows: [], badLines: 0, counts: { ok: 0, retry: 0, fail: 0 } });
   });
 
   it('counts malformed JSON while retaining valid lines', () => {
@@ -49,7 +50,7 @@ describe('readNight', () => {
       'not json', '', '  ',
       JSON.stringify({ at: 'first+01:00', job: 'job', status: 'ok' }),
     ])).toEqual({
-      night: 'night', badLines: 1,
+      night: 'night', badLines: 1, counts: { ok: 1, retry: 0, fail: 0 },
       rows: [{ job: 'job', owner: null, runs: 1, retries: 0, lastStatus: 'ok',
         lastError: null, firstAt: 'first+01:00', lastAt: 'first+01:00' }],
     });
@@ -63,7 +64,7 @@ describe('readNight', () => {
     { at: 'time', job: 'job', status: 'ok', owner: 1 },
     { at: 'time', job: 'job', status: 'ok', error: null },
   ])('counts invalid line shapes (%j)', value => {
-    expect(readLines([JSON.stringify(value)])).toEqual({ night: 'night', rows: [], badLines: 1 });
+    expect(readLines([JSON.stringify(value)])).toEqual({ night: 'night', rows: [], badLines: 1, counts: { ok: 0, retry: 0, fail: 0 } });
   });
 
   it('uses file order, updates owners, and sorts with plain string comparison', () => {
@@ -73,6 +74,7 @@ describe('readNight', () => {
       JSON.stringify({ at: 'time', job: 'Z', status: 'ok', owner: null }),
       JSON.stringify({ at: 'earlier+02:00', job: '__proto__', status: 'fail', owner: 'last', error: 'new' }),
     ]);
+    expect(night?.counts).toEqual({ ok: 2, retry: 1, fail: 1 });
     expect(night?.rows.map(row => row.job)).toEqual(['Z', '__proto__', 'a']);
     expect(night?.rows[1]).toEqual({
       job: '__proto__', owner: 'last', runs: 2, retries: 1,

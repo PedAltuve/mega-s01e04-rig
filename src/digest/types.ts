@@ -25,6 +25,8 @@ export type DigestRow = {
 
 export type Night = {
   night: string;
+  // Valid lines per status, including every run of a job.
+  counts: { ok: number; retry: number; fail: number };
   // Sorted by job, so the page and the JSON agree on order (ADR 0001).
   rows: DigestRow[];
   // Lines that did not parse: counted, never thrown.
