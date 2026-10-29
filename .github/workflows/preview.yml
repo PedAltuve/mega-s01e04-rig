@@ -1,0 +1,55 @@
+# Preview for review (ADR 0003). Builds /digest/<night> as one HTML file and deploys it to
+# GitHub Pages as an artifact, so no preview is ever committed. The marker comes from the repo
+# variable LANE_MARKER; delete the variable and rerun to upload the page again without it.
+name: preview
+
+on:
+  workflow_dispatch:
+    inputs:
+      night:
+        description: Night to preview (YYYY-MM-DD)
+        default: '2026-10-28'
+        required: true
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 12
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - run: pnpm install --no-frozen-lockfile
+      - name: Save the page
+        env:
+          LANE_MARKER: ${{ vars.LANE_MARKER }}
+          NIGHT: ${{ inputs.night }}
+          PORT: '8787'
+        run: |
+          pnpm start > /dev/null 2>&1 &
+          for _ in $(seq 30); do curl -fs "http://localhost:$PORT/health" > /dev/null && break; sleep 1; done
+          mkdir site
+          curl -fsS "http://localhost:$PORT/digest/$NIGHT" -o site/index.html
+          if [ -n "$LANE_MARKER" ]; then grep -qF "$LANE_MARKER" site/index.html; else grep -q 'no marker set' site/index.html; fi
+      - uses: actions/configure-pages@v6
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: site
+          retention-days: 1
+      - id: deploy
+        uses: actions/deploy-pages@v5
